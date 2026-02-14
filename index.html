@@ -25,6 +25,10 @@
             margin: 0;
             text-shadow: 0 0 10px rgba(255, 184, 0, 0.3);
             font-size: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 5vh 5vw;
         }
 
         .retro-title {
@@ -72,6 +76,8 @@
 
         table {
             width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
             border-spacing: 0 20px;
             border-collapse: separate;
         }
@@ -274,7 +280,7 @@
     </style>
 </head>
 
-<body class="p-32">
+<body class="">
     <div id="conn-warning">
         <div class="warn-pulse"></div>
         Controller Disconnected - Waiting...
@@ -283,31 +289,29 @@
     <canvas id="bg-canvas"></canvas>
 
     <header
-        class="flex justify-between items-center mb-16 border-b border-white/5 pb-8 opacity-60 hover:opacity-100 transition-opacity">
-        <div class="flex items-center gap-10">
-            <div class="p-6 border border-accent/20 rounded-xl bg-zinc-900/40">
-                <h1 class="text-accent retro-title text-2xl font-black mb-1">GAACHUTTAN <span
-                        class="text-white/30 text-xs">MK-II</span></h1>
-                <p class="text-[8px] tracking-[0.4em] text-zinc-600 font-black uppercase">Tactical Link Active</p>
+        class="w-full flex justify-between items-center mb-10 border-b border-white/5 pb-6 opacity-40 hover:opacity-100 transition-opacity">
+        <div class="flex items-center gap-6">
+            <div class="p-4 border border-accent/20 rounded-xl bg-zinc-900/40">
+                <h1 class="text-accent retro-title text-lg font-black mb-0.5">GAACHUTTAN <span
+                        class="text-white/30 text-[10px]">MK-II</span></h1>
+                <p class="text-[6px] tracking-[0.4em] text-zinc-600 font-black uppercase">Tactical Link Active</p>
             </div>
-            <div class="flex flex-col gap-4">
-                <div id="room-id"
-                    class="px-8 py-4 bg-zinc-900/60 rounded-xl font-mono text-accent text-lg border border-white/5 tracking-widest flex items-center gap-6">
-                    <svg class="w-12 h-6 text-accent" viewBox="0 0 100 40" fill="none">
-                        <path d="M0 20 H30 L35 5 L45 35 L50 20 H100" stroke="currentColor" stroke-width="4"
-                            stroke-linecap="round" stroke-linejoin="round" class="ecg-path" />
-                    </svg>
-                    AWAIT_UPLINK
-                </div>
+            <div id="room-id"
+                class="px-5 py-2.5 bg-zinc-900/60 rounded-xl font-mono text-accent text-sm border border-white/5 tracking-widest flex items-center gap-4">
+                <svg class="w-8 h-4 text-accent" viewBox="0 0 100 40" fill="none">
+                    <path d="M0 20 H30 L35 5 L45 35 L50 20 H100" stroke="currentColor" stroke-width="4"
+                        stroke-linecap="round" stroke-linejoin="round" class="ecg-path" />
+                </svg>
+                AWAIT_UPLINK
             </div>
         </div>
         <div class="text-right">
-            <div id="live-clock" class="text-4xl font-black tracking-tighter text-white mb-2"></div>
-            <div id="game-date" class="text-[11px] tracking-[0.4em] text-zinc-600 uppercase font-black"></div>
+            <div id="live-clock" class="text-2xl font-black tracking-tighter text-white mb-1"></div>
+            <div id="game-date" class="text-[9px] tracking-[0.4em] text-zinc-600 uppercase font-black"></div>
         </div>
     </header>
 
-    <main id="main-content">
+    <main id="main-content" class="w-full flex-1 flex flex-col items-center justify-center">
         <div id="initial-screen" class="flex flex-col items-center justify-center h-[55vh]">
             <div class="relative group">
                 <div class="absolute -inset-2 bg-accent/20 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
@@ -328,6 +332,31 @@
         function initCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         window.addEventListener('resize', initCanvas);
         initCanvas();
+
+        // Retro Audio Engine
+        const AudioFX = {
+            ctx: null,
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); },
+            play(type) {
+                this.init();
+                const now = this.ctx.currentTime;
+                if (type === 'round') { // Victory chord
+                    this.note(440, now, 0.1, 'square'); this.note(554.37, now + 0.1, 0.1, 'square'); this.note(659.25, now + 0.2, 0.4, 'square');
+                } else if (type === 'match') { // Major fanfare
+                    [523, 659, 783, 1046].forEach((f, i) => this.note(f, now + (i * 0.15), 0.2, 'sawtooth'));
+                } else if (type === 'reset') { // Downward sweep
+                    this.note(880, now, 0.1, 'sine'); this.note(440, now + 0.1, 0.2, 'sine');
+                }
+            },
+            note(freq, start, dur, type = 'square') {
+                const osc = this.ctx.createOscillator();
+                const g = this.ctx.createGain();
+                osc.type = type; osc.frequency.setValueAtTime(freq, start);
+                osc.connect(g); g.connect(this.ctx.destination);
+                g.gain.setValueAtTime(0.1, start); g.gain.linearRampToValueAtTime(0, start + dur);
+                osc.start(start); osc.stop(start + dur);
+            }
+        };
 
         class Particle {
             constructor() { this.reset(); }
@@ -354,11 +383,14 @@
         peer.on('open', id => {
             localStorage.setItem('tv_v2_id', id);
             document.getElementById('room-id').innerText = `NODE_${id}`;
-            const url = `${window.location.origin}${window.location.pathname.replace('index.html', 'control.html')}?id=${id}`;
+            const path = window.location.pathname.endsWith('.html') ? window.location.pathname.replace('index.html', 'control.html') : window.location.pathname + 'control.html';
+            const url = `${window.location.origin}${path.replace('//', '/')}?id=${id}`;
             new QRCode(document.getElementById("qrcode"), { text: url, width: 220, height: 220 });
         });
 
         let disconnectTimer = null;
+        let revealLock = false;
+
         peer.on('connection', conn => {
             document.getElementById('initial-screen').style.display = 'none';
             document.getElementById('table-container').classList.remove('hidden');
@@ -366,20 +398,35 @@
             conn.on('data', data => {
                 document.getElementById('conn-warning').classList.remove('visible');
                 clearTimeout(disconnectTimer);
+                disconnectTimer = setTimeout(() => { document.getElementById('conn-warning').classList.add('visible'); }, 7000);
 
-                if (data.type === 'SYNC') updateDisplay(data);
-                if (data.type === 'ROUND_REVEAL') { showRoundWinner(data); setTimeout(() => document.getElementById('reveal-overlay').classList.add('hidden'), 3500); }
-                if (data.type === 'CHAMPION_REVEAL') showChampion(data);
-                if (data.type === 'RESET_UI' || data.type === 'CLEAR_OVERLAYS') {
+                if (data.type === 'PING') return;
+                if (data.type === 'HANDSHAKE') { console.log("Handshake received"); return; }
+
+                if (data.type === 'SYNC') {
+                    updateDisplay(data);
+                    if (data.isFinalized) { showChampion(data); }
+                    else if (!revealLock) document.getElementById('reveal-overlay').classList.add('hidden');
+                }
+                if (data.type === 'ROUND_REVEAL') {
+                    revealLock = true;
+                    showRoundWinner(data);
+                    AudioFX.play('round');
+                    setTimeout(() => {
+                        revealLock = false;
+                        document.getElementById('reveal-overlay').classList.add('hidden');
+                    }, 2000);
+                }
+                if (data.type === 'CHAMPION_REVEAL') { showChampion(data); AudioFX.play('match'); }
+                if (data.type === 'RESET_UI' || data.type === 'CLEAR_OVERLAYS' || data.type === 'CLOSE_OVERLAYS') {
+                    revealLock = false;
                     document.getElementById('reveal-overlay').classList.add('hidden');
                     if (data.type === 'RESET_UI') location.reload();
+                    if (data.type === 'CLEAR_OVERLAYS') AudioFX.play('reset');
                 }
-
-                // Heartbeat: show warning if no data for 10s
-                disconnectTimer = setTimeout(() => {
-                    document.getElementById('conn-warning').classList.add('visible');
-                }, 10000);
             });
+
+            conn.on('close', () => { document.getElementById('conn-warning').classList.add('visible'); });
         });
 
         function updateDisplay({ players, showTotals, dealerIdx, liveScores, focusedPlayerId }) {
@@ -389,7 +436,10 @@
                 const isDealer = (i === dealerIdx);
                 const isHidden = p.greyed;
                 html += `<th class="${isHidden ? 'hidden' : ''} ${isDealer ? 'text-accent font-black' : 'text-zinc-600'} text-xl">
-                    ${isDealer ? '<span class="dealer-dot"></span>' : ''}${p.name}
+                    <div class="flex items-center gap-2 justify-center">
+                        ${isDealer ? '<span class="dealer-dot"></span>' : ''}
+                        <span>${p.name}</span>
+                    </div>
                 </th>`;
             });
             html += `</tr></thead><tbody>`;
@@ -462,7 +512,7 @@
             overlay.classList.remove('hidden');
             overlay.innerHTML = `
                 <div class="reveal-container w-full max-w-7xl animate-podium">
-                    <h1 class="retro-title text-center text-8xl font-black mb-20 text-white">THE CHAMPIONS</h1>
+                    <h1 class="retro-title text-center text-8xl font-black mb-20 text-white">The Winners</h1>
                     
                     <div class="flex justify-center items-end gap-0 mb-32">
                         <!-- Second -->
