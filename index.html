@@ -39,20 +39,6 @@
             letter-spacing: 0.15em;
         }
 
-        /* CRT Effect */
-        body::before {
-            content: " ";
-            display: block;
-            position: fixed;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
-            z-index: 999;
-            background-size: 100% 4px, 3px 100%;
-            pointer-events: none;
-        }
 
         #bg-canvas {
             position: fixed;
@@ -79,10 +65,10 @@
 
         table {
             width: 100%;
-            table-layout: auto;
+            table-layout: fixed;
             max-width: 94vw;
             margin: 0 auto;
-            border-spacing: 0 1vh;
+            border-spacing: 0.5vw 1vh;
             border-collapse: separate;
         }
 
@@ -116,6 +102,12 @@
         tr td:last-child {
             border-radius: 0 12px 12px 0;
             border-left: none;
+        }
+
+        /* Responsive Table Adjustments */
+        th:first-child,
+        td:first-child {
+            width: 5vw;
         }
 
         .dealer-dot {
@@ -295,21 +287,17 @@
     <header
         class="w-full flex justify-between items-center mb-6 border-b border-white/5 pb-4 opacity-100 transition-opacity">
         <div class="flex items-center gap-4">
-            <div class="px-3 py-1.5 border border-accent/20 rounded-lg bg-zinc-900/40">
-                <h1 class="text-accent retro-title text-sm font-black mb-0">Ledger <span
+            <div class="px-3 py-1 border border-accent/20 rounded-lg bg-zinc-900/40">
+                <h1 class="text-accent retro-title text-sm font-black mb-0">Gaachuttan: Ledger <span
                         class="text-white/30 text-[8px]">MK-II</span></h1>
                 <p class="text-[5px] tracking-[0.2em] text-zinc-600 font-black uppercase">Tactile Ledger System</p>
             </div>
             <div id="room-id"
-                class="px-3 py-1.5 bg-zinc-900/60 rounded-lg font-mono text-accent text-xs border border-white/5 tracking-widest flex items-center gap-3">
-                <div class="flex flex-col">
-                    <span id="node-val" class="font-black">AWAIT_UPLINK</span>
-                </div>
-                <div class="w-px h-4 bg-white/10 mx-1"></div>
-                <div class="flex items-center gap-2">
-                    <span id="uplink-status"
-                        class="text-[9px] text-red-500 font-black animate-pulse uppercase">Offline</span>
-                </div>
+                class="px-3 py-1 bg-zinc-900/40 rounded-lg font-mono text-accent text-xs border border-white/5 tracking-widest flex items-center gap-3">
+                <span id="node-val" class="font-black text-[10px]">AWAIT_UPLINK</span>
+                <div class="w-px h-3 bg-white/10"></div>
+                <span id="uplink-status"
+                    class="text-[8px] text-red-500 font-black animate-pulse uppercase">Offline</span>
             </div>
         </div>
         <div class="text-right flex items-baseline gap-4">
@@ -318,7 +306,7 @@
         </div>
     </header>
 
-    <main id="main-content" class="w-full flex-1 flex flex-col items-center justify-center">
+    <main id="main-content" class="w-full flex flex-col items-center">
         <div id="initial-screen" class="flex flex-col items-center justify-center h-[55vh]">
             <div class="relative group">
                 <div class="absolute -inset-2 bg-accent/20 rounded-3xl blur-xl opacity-75 animate-pulse"></div>
