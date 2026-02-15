@@ -28,7 +28,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 5vh 5vw;
+            padding: 3vh 3vw;
+            box-sizing: border-box;
+            width: 100vw;
+            height: 100vh;
         }
 
         .retro-title {
@@ -76,18 +79,19 @@
 
         table {
             width: 100%;
-            max-width: 1400px;
+            table-layout: auto;
+            max-width: 94vw;
             margin: 0 auto;
-            border-spacing: 0 20px;
+            border-spacing: 0 1vh;
             border-collapse: separate;
         }
 
         th {
             color: #52525b;
             text-transform: uppercase;
-            letter-spacing: 0.3em;
-            font-size: clamp(0.8rem, 2vw, 1.25rem);
-            padding: 1rem 0.5rem;
+            letter-spacing: 0.2vw;
+            font-size: clamp(0.7rem, 1.5vw, 1.2rem);
+            padding: 1vh 0.5vw;
             font-weight: 900;
             text-align: center;
             overflow: hidden;
@@ -96,11 +100,11 @@
         }
 
         td {
-            padding: clamp(0.5rem, 2vh, 2rem);
+            padding: clamp(0.2rem, 1.5vh, 1.5rem);
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
-            font-size: clamp(1rem, 5vw, 6rem);
+            font-size: clamp(0.8rem, 4vw, 5rem);
         }
 
         tr td:first-child {
@@ -289,34 +293,28 @@
     <canvas id="bg-canvas"></canvas>
 
     <header
-        class="w-full flex justify-between items-center mb-10 border-b border-white/5 pb-6 opacity-90 hover:opacity-100 transition-opacity">
-        <div class="flex items-center gap-6">
-            <div class="p-4 border border-accent/20 rounded-xl bg-zinc-900/40">
-                <h1 class="text-accent retro-title text-lg font-black mb-0.5">Ledger: GAACHUTTAN <span
-                        class="text-white/30 text-[10px]">MK-II</span></h1>
-                <p class="text-[6px] tracking-[0.4em] text-zinc-600 font-black uppercase">Tactile Game Score Ledger
-                    System</p>
+        class="w-full flex justify-between items-center mb-6 border-b border-white/5 pb-4 opacity-100 transition-opacity">
+        <div class="flex items-center gap-4">
+            <div class="px-3 py-1.5 border border-accent/20 rounded-lg bg-zinc-900/40">
+                <h1 class="text-accent retro-title text-sm font-black mb-0">Ledger <span
+                        class="text-white/30 text-[8px]">MK-II</span></h1>
+                <p class="text-[5px] tracking-[0.2em] text-zinc-600 font-black uppercase">Tactile Ledger System</p>
             </div>
             <div id="room-id"
-                class="px-5 py-2.5 bg-zinc-900/60 rounded-xl font-mono text-accent text-sm border border-white/5 tracking-widest flex items-center gap-4">
-                <svg class="w-8 h-4 text-accent" viewBox="0 0 100 40" fill="none">
-                    <path d="M0 20 H30 L35 5 L45 35 L50 20 H100" stroke="currentColor" stroke-width="4"
-                        stroke-linecap="round" stroke-linejoin="round" class="ecg-path" />
-                </svg>
+                class="px-3 py-1.5 bg-zinc-900/60 rounded-lg font-mono text-accent text-xs border border-white/5 tracking-widest flex items-center gap-3">
                 <div class="flex flex-col">
-                    <span id="node-label" class="text-[8px] opacity-40">NODE_ID</span>
-                    <span id="node-val">AWAIT_UPLINK</span>
+                    <span id="node-val" class="font-black">AWAIT_UPLINK</span>
                 </div>
-                <div class="w-px h-6 bg-white/10 mx-2"></div>
-                <div class="flex flex-col">
-                    <span class="text-[8px] opacity-40 uppercase">Status</span>
-                    <span id="uplink-status" class="text-red-500 animate-pulse">OFFLINE</span>
+                <div class="w-px h-4 bg-white/10 mx-1"></div>
+                <div class="flex items-center gap-2">
+                    <span id="uplink-status"
+                        class="text-[9px] text-red-500 font-black animate-pulse uppercase">Offline</span>
                 </div>
             </div>
         </div>
-        <div class="text-right">
-            <div id="live-clock" class="text-2xl font-black tracking-tighter text-white mb-1"></div>
-            <div id="game-date" class="text-[9px] tracking-[0.4em] text-zinc-600 uppercase font-black"></div>
+        <div class="text-right flex items-baseline gap-4">
+            <div id="live-clock" class="text-xl font-black tracking-tighter text-white"></div>
+            <div id="game-date" class="text-[8px] tracking-[0.2em] text-zinc-600 uppercase font-black"></div>
         </div>
     </header>
 
@@ -486,10 +484,10 @@
                 html += `</tr>`;
             }
             if (showTotals) {
-                html += `<tr class="border-t-4 border-accent/20"><td class="text-accent text-[14px] font-black italic">SUM</td>`;
+                html += `<tr class="border-t-4 border-accent/20"><td class="text-accent text-[clamp(10px,1.5vw,14px)] font-black italic">SUM</td>`;
                 players.forEach(p => {
                     const isHidden = p.greyed;
-                    html += `<td class="${isHidden ? 'hidden' : ''} text-[clamp(2rem,8vw,10rem)] font-black text-white p-2">${p.scores.reduce((a, b) => a + b, 0)}</td>`;
+                    html += `<td class="${isHidden ? 'hidden' : ''} text-[clamp(1.5rem,8vw,8rem)] font-black text-white p-1">${p.scores.reduce((a, b) => a + b, 0)}</td>`;
                 });
                 html += `</tr>`;
             }
