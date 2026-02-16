@@ -7,7 +7,8 @@
     <title>G-CONTROL V2 // REFINED</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         body {
             background: #000;
@@ -95,12 +96,9 @@
         </div>
 
         <div class="grid grid-cols-2 gap-2 mb-4">
-            <div class="bg-zinc-900/50 p-3 rounded-lg border border-white/5 flex items-center justify-between">
-                <span class="text-[9px] font-black text-zinc-500 italic">TOTALS</span>
-                <input type="checkbox" id="show-totals" onchange="saveAndSync()" class="accent-yellow-600">
-            </div>
-            <div class="bg-zinc-900/50 p-3 rounded-lg border border-white/5 flex items-center justify-between">
-                <span class="text-[9px] font-black text-zinc-500 italic">WIN</span>
+            <div
+                class="bg-zinc-900/50 p-3 rounded-lg border border-white/5 flex items-center justify-between col-span-2">
+                <span class="text-[9px] font-black text-zinc-500 italic">WIN MODE</span>
                 <select id="win-mode" onchange="saveAndSync()"
                     class="bg-transparent text-[10px] font-black text-yellow-600 outline-none">
                     <option value="low">LOW</option>
@@ -143,6 +141,21 @@
                 WINNER
             </button>
         </div>
+
+        <div id="pagination-ctrl"
+            class="hidden mt-4 flex justify-between items-center bg-zinc-900/50 p-2 rounded-xl border border-white/5">
+            <button onclick="changePage(-1)" class="p-4 text-accent active:scale-90 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <span class="text-[9px] font-black text-zinc-500 italic tracking-[0.2em]">NAVIGATE LEDGER</span>
+            <button onclick="changePage(1)" class="p-4 text-accent active:scale-90 transition-transform">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+        </div>
     </div>
 
     <div id="stats-view" class="hidden fixed inset-0 bg-black z-[200] flex flex-col">
@@ -153,8 +166,12 @@
         <div class="p-6 border-t border-white/5">
             <button
                 onclick="document.getElementById('stats-view').classList.add('hidden'); state.isFinalized=false; saveAndSync({type: 'CLOSE_OVERLAYS'});"
-                class="w-full bg-white text-black font-black py-4 rounded-lg text-[10px] uppercase shadow-lg border-2 border-black/20 active:scale-95 transition-all">
+                class="w-full bg-white text-black font-black py-4 rounded-lg text-[10px] uppercase shadow-lg border-2 border-black/20 active:scale-95 transition-all mb-3">
                 Back to Match
+            </button>
+            <button onclick="generateMatchPDF()"
+                class="w-full bg-accent text-black font-black py-4 rounded-lg text-[10px] uppercase shadow-lg border-2 border-black/20 active:scale-95 transition-all">
+                Download PDF Report
             </button>
         </div>
     </div>
@@ -170,6 +187,7 @@
         let liveScores = {}; let focusedPlayerId = null; let conn = null; let wakeLock = null;
         let tvId = localStorage.getItem('last_tv_id');
         let isConnecting = false;
+        let currentPage = 0;
         const peer = new Peer();
 
         // Retro Audio Engine
@@ -322,12 +340,31 @@
             AudioFX.play('next');
             saveAndSync({ type: 'ROUND_REVEAL' });
             render();
+            checkPagination();
+        }
+
+        function checkPagination() {
+            const rounds = state.players[0]?.scores.length || 0;
+            const ctrl = document.getElementById('pagination-ctrl');
+            if (rounds > 12) {
+                ctrl.classList.remove('hidden');
+            } else {
+                ctrl.classList.add('hidden');
+                currentPage = 0; // Reset if rounds under 12
+            }
+        }
+
+        function changePage(dir) {
+            const rounds = state.players[0]?.scores.length || 0;
+            const maxPages = Math.ceil(rounds / 12);
+            currentPage = Math.max(0, Math.min(maxPages - 1, currentPage + dir));
+            saveAndSync({ type: 'SET_PAGE', page: currentPage });
         }
 
         function finalizeMatch() {
             state.endTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             state.isFinalized = true;
-            saveAndSync({ type: 'CHAMPION_REVEAL' });
+            saveAndSync({ type: 'WINNER_REVEAL' });
             const active = state.players.filter(p => !p.greyed).map(p => ({ name: p.name, total: p.scores.reduce((a, b) => a + b, 0) }));
             active.sort((a, b) => state.lowWins ? a.total - b.total : b.total - a.total);
 
@@ -371,9 +408,72 @@
         }
         function saveAndSync(extra) {
             state.lowWins = document.getElementById('win-mode').value === 'low';
-            state.showTotals = document.getElementById('show-totals').checked;
             localStorage.setItem('game_state_v2_f', JSON.stringify(state));
             if (conn?.open) conn.send({ type: 'SYNC', ...state, liveScores, focusedPlayerId, ...extra });
+        }
+
+        async function generateMatchPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Modern Styles
+            const brand = "#FFB800";
+            const dark = "#08080A";
+
+            // Header
+            doc.setFillColor(8, 8, 10);
+            doc.rect(0, 0, 210, 40, 'F');
+            doc.setTextColor(255, 184, 0);
+            doc.setFontSize(22);
+            doc.setFont("helvetica", "bold");
+            doc.text("GAACHUTTAN: LEDGER", 15, 20);
+            doc.setFontSize(10);
+            doc.setTextColor(100, 100, 100);
+            doc.text(`MATCH RECORD // DATE: ${state.date}`, 15, 30);
+            doc.text(`TIME: ${state.startTime} - ${state.endTime || 'ACTIVE'}`, 150, 30);
+
+            // Summary Table
+            const active = state.players.filter(p => !p.greyed).map(p => ({
+                name: p.name,
+                total: p.scores.reduce((a, b) => a + b, 0),
+                p: p
+            }));
+            active.sort((a, b) => state.lowWins ? a.total - b.total : b.total - a.total);
+
+            doc.autoTable({
+                startY: 50,
+                head: [['RANK', 'PLAYER', 'TOTAL STATUS']],
+                body: active.map((p, i) => [
+                    `#${i + 1}`,
+                    p.name,
+                    `${p.total} POINTS ${i === 0 ? '(WINNER)' : ''}`
+                ]),
+                theme: 'grid',
+                headStyles: { fillStyle: brand, textColor: 0, fontStyle: 'bold' },
+                styles: { font: 'helvetica', fontSize: 10 }
+            });
+
+            // Detailed Ledger
+            doc.setFontSize(12);
+            doc.setTextColor(0);
+            doc.text("FULL MATCH BREAKDOWN", 15, doc.lastAutoTable.finalY + 15);
+
+            const rounds = state.players[0].scores.length;
+            const head = ['RD', ...state.players.filter(p => !p.greyed).map(p => p.name)];
+            const body = [];
+            for (let r = 0; r < rounds; r++) {
+                body.push([r + 1, ...state.players.filter(p => !p.greyed).map(p => p.scores[r])]);
+            }
+
+            doc.autoTable({
+                startY: doc.lastAutoTable.finalY + 20,
+                head: [head],
+                body: body,
+                theme: 'striped',
+                headStyles: { fillColor: [40, 40, 40], textColor: 255 }
+            });
+
+            doc.save(`ledger-${state.date.replace(/\//g, '-')}.pdf`);
         }
 
         function exportGame() { const b = new Blob([JSON.stringify(state)], { type: 'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = 'match.json'; a.click(); }
@@ -391,7 +491,6 @@
         }, 5000);
 
         window.onload = () => {
-            document.getElementById('show-totals').checked = state.showTotals;
             document.getElementById('win-mode').value = state.lowWins ? 'low' : 'high';
             render();
             // Re-request wake lock if tab becomes visible again
