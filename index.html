@@ -15,6 +15,9 @@
         :root {
             --accent: #ffb800;
             --bg: #08080a;
+            --td-padding: clamp(0.1rem, 0.8vh, 1.2rem);
+            --td-font: clamp(0.8rem, 3.5vh, 4.5rem);
+            --table-spacing: 0.2vh;
         }
 
         body {
@@ -28,7 +31,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 3vh 3vw;
+            padding: 2vh 3vw;
             box-sizing: border-box;
             width: 100vw;
             height: 100vh;
@@ -68,7 +71,7 @@
             table-layout: fixed;
             max-width: 94vw;
             margin: 0 auto;
-            border-spacing: 0.5vw 1vh;
+            border-spacing: 0.5vw var(--table-spacing);
             border-collapse: separate;
         }
 
@@ -76,8 +79,8 @@
             color: #52525b;
             text-transform: uppercase;
             letter-spacing: 0.2vw;
-            font-size: clamp(0.7rem, 1.5vw, 1.2rem);
-            padding: 1vh 0.5vw;
+            font-size: clamp(0.7rem, 1.2vw, 1.1rem);
+            padding: 0.5vh 0.5vw;
             font-weight: 900;
             text-align: center;
             overflow: hidden;
@@ -86,11 +89,11 @@
         }
 
         td {
-            padding: clamp(0.2rem, 1.5vh, 1.5rem);
+            padding: var(--td-padding);
             background: rgba(255, 255, 255, 0.04);
             border: 1px solid rgba(255, 255, 255, 0.05);
             text-align: center;
-            font-size: clamp(0.8rem, 4vw, 5rem);
+            font-size: var(--td-font);
         }
 
         tr td:first-child {
@@ -195,27 +198,27 @@
         }
 
         .rank-badge {
-            padding: 0.5vh 1vw;
+            padding: 0.2vh 1vw;
             font-weight: 900;
             border-radius: 4px;
-            margin-bottom: 2vh;
-            font-size: clamp(8px, 1vw, 14px);
+            margin-bottom: 1vh;
+            font-size: clamp(8px, 0.8vw, 12px);
         }
 
         .p-1 {
-            height: 40vh;
+            height: 30vh;
             background: linear-gradient(to top, rgba(255, 184, 0, 0.2), transparent);
             border-top: 4px solid var(--accent);
         }
 
         .p-2 {
-            height: 30vh;
+            height: 22vh;
             background: linear-gradient(to top, rgba(255, 255, 255, 0.1), transparent);
             border-top: 2px solid #a1a1aa;
         }
 
         .p-3 {
-            height: 22vh;
+            height: 16vh;
             background: linear-gradient(to top, rgba(255, 255, 255, 0.05), transparent);
             border-top: 2px solid #71717a;
         }
@@ -436,6 +439,23 @@
 
         function updateDisplay({ players, showTotals, dealerIdx, liveScores, focusedPlayerId }) {
             if (!players.length) return;
+
+            // Dynamic Scaling Engine
+            const rounds = players[0].scores.length;
+            const liveRow = (liveScores && Object.keys(liveScores).length > 0) ? 1 : 0;
+            const sumRow = showTotals ? 1 : 0;
+            const totalRows = rounds + liveRow + sumRow + 1; // +1 for header
+
+            let scale = 1.0;
+            if (totalRows > 9) {
+                scale = 9 / totalRows;
+            }
+
+            const root = document.documentElement;
+            root.style.setProperty('--td-padding', `${Math.max(0.1, 0.8 * scale)}vh`);
+            root.style.setProperty('--td-font', `clamp(0.8rem, ${3.5 * scale}vh, 5rem)`);
+            root.style.setProperty('--table-spacing', `${Math.max(0.1, 0.2 * scale)}vh`);
+
             let html = `<table><thead><tr><th>RD</th>`;
             players.forEach((p, i) => {
                 const isDealer = (i === dealerIdx);
@@ -448,7 +468,7 @@
                 </th>`;
             });
             html += `</tr></thead><tbody>`;
-            const rounds = players[0].scores.length;
+            // const rounds = players[0].scores.length; // Already declared at top
             for (let r = 0; r < rounds; r++) {
                 const isCurrent = (r === rounds - 1);
                 html += `<tr class="${isCurrent ? 'current-round' : 'prev-round'}"><td class="text-zinc-500 font-mono text-xs">#${String(r + 1).padStart(2, '0')}</td>`;
@@ -470,10 +490,10 @@
                 html += `</tr>`;
             }
             if (showTotals) {
-                html += `<tr class="border-t-4 border-accent/20"><td class="text-accent text-[clamp(10px,1.5vw,14px)] font-black italic">SUM</td>`;
+                html += `<tr class="border-t-4 border-accent/20"><td class="text-accent text-[clamp(8px,1.2vw,12px)] font-black italic">SUM</td>`;
                 players.forEach(p => {
                     const isHidden = p.greyed;
-                    html += `<td class="${isHidden ? 'hidden' : ''} text-[clamp(1.5rem,8vw,8rem)] font-black text-white p-1">${p.scores.reduce((a, b) => a + b, 0)}</td>`;
+                    html += `<td class="${isHidden ? 'hidden' : ''} text-[clamp(1.2rem,6.5vh,7rem)] font-black text-white p-0.5">${p.scores.reduce((a, b) => a + b, 0)}</td>`;
                 });
                 html += `</tr>`;
             }
