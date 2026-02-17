@@ -299,8 +299,6 @@
                 <div class="w-px h-3 bg-white/10"></div>
                 <span id="uplink-status"
                     class="text-[8px] text-red-500 font-black animate-pulse uppercase">Offline</span>
-                <div id="page-indicator" class="hidden w-px h-3 bg-white/10"></div>
-                <span id="page-val" class="hidden text-[8px] text-white/40 font-black uppercase">PG 01</span>
             </div>
         </div>
         <div class="text-right flex items-baseline gap-4">
@@ -423,11 +421,7 @@
                         document.getElementById('reveal-overlay').classList.add('hidden');
                     }, 2000);
                 }
-                if (data.type === 'WINNER_REVEAL') { showChampion(data); AudioFX.play('match'); }
-                if (data.type === 'SET_PAGE') {
-                    currentPage = data.page;
-                    if (state) updateDisplay(state);
-                }
+                if (data.type === 'CHAMPION_REVEAL') { showChampion(data); AudioFX.play('match'); }
                 if (data.type === 'RESET_UI' || data.type === 'CLEAR_OVERLAYS' || data.type === 'CLOSE_OVERLAYS') {
                     revealLock = false;
                     document.getElementById('reveal-overlay').classList.add('hidden');
@@ -443,33 +437,14 @@
             });
         });
 
-        function updateDisplay(data) {
-            state = data;
-            const { players, showTotals, dealerIdx, liveScores, focusedPlayerId } = data;
+        function updateDisplay({ players, showTotals, dealerIdx, liveScores, focusedPlayerId }) {
             if (!players.length) return;
 
-            // Pagination Calculations
-            const roundsTotal = players[0].scores.length;
-            const startIdx = currentPage * roundsPerPage;
-            const endIdx = Math.min(startIdx + roundsPerPage, roundsTotal);
-            const roundsOnPage = endIdx - startIdx;
-
             // Dynamic Scaling Engine
+            const rounds = players[0].scores.length;
             const liveRow = (liveScores && Object.keys(liveScores).length > 0) ? 1 : 0;
             const sumRow = showTotals ? 1 : 0;
-            const totalRows = roundsOnPage + liveRow + sumRow + 1; // +1 for header
-
-            // Page Indicator Update
-            const pVal = document.getElementById('page-val');
-            const pInd = document.getElementById('page-indicator');
-            if (roundsTotal > roundsPerPage) {
-                pVal.innerText = `PG ${String(currentPage + 1).padStart(2, '0')}`;
-                pVal.classList.remove('hidden');
-                pInd.classList.remove('hidden');
-            } else {
-                pVal.classList.add('hidden');
-                pInd.classList.add('hidden');
-            }
+            const totalRows = rounds + liveRow + sumRow + 1; // +1 for header
 
             let scale = 1.0;
             if (totalRows > 9) {
@@ -485,21 +460,17 @@
             players.forEach((p, i) => {
                 const isDealer = (i === dealerIdx);
                 const isHidden = p.greyed;
-                const total = p.scores.reduce((a, b) => a + b, 0);
-                html += `<th class="${isHidden ? 'hidden' : ''} font-black">
-                    <div class="flex flex-col items-center">
-                        <span class="text-[clamp(10px,1.2vh,18px)] text-accent opacity-60 italic mb-1">TOT: ${total}</span>
-                        <div class="flex items-center gap-2 justify-center">
-                            ${isDealer ? '<span class="dealer-dot"></span>' : ''}
-                            <span class="${focusedPlayerId === p.id ? 'text-white' : 'text-zinc-500'} text-xl uppercase">${p.name}</span>
-                        </div>
+                html += `<th class="${isHidden ? 'hidden' : ''} ${isDealer ? 'text-accent font-black' : 'text-zinc-600'} text-xl">
+                    <div class="flex items-center gap-2 justify-center">
+                        ${isDealer ? '<span class="dealer-dot"></span>' : ''}
+                        <span>${p.name}</span>
                     </div>
                 </th>`;
             });
             html += `</tr></thead><tbody>`;
-            // Render Paginated Rounds
-            for (let r = startIdx; r < endIdx; r++) {
-                const isCurrent = (r === roundsTotal - 1);
+            // const rounds = players[0].scores.length; // Already declared at top
+            for (let r = 0; r < rounds; r++) {
+                const isCurrent = (r === rounds - 1);
                 html += `<tr class="${isCurrent ? 'current-round' : 'prev-round'}"><td class="text-zinc-500 font-mono text-xs">#${String(r + 1).padStart(2, '0')}</td>`;
                 players.forEach(p => {
                     const isHidden = p.greyed;
@@ -515,6 +486,14 @@
                     const isFocused = (p.id === focusedPlayerId);
                     const isSharp = !isFocused && score && score !== "" && score !== "..";
                     html += `<td class="font-light italic ${isHidden ? 'hidden' : ''} ${isSharp ? 'sharp' : ''}">${score || '..'}</td>`;
+                });
+                html += `</tr>`;
+            }
+            if (showTotals) {
+                html += `<tr class="border-t-4 border-accent/20"><td class="text-accent text-[clamp(8px,1.2vw,12px)] font-black italic">SUM</td>`;
+                players.forEach(p => {
+                    const isHidden = p.greyed;
+                    html += `<td class="${isHidden ? 'hidden' : ''} text-[clamp(1.2rem,6.5vh,7rem)] font-black text-white p-0.5">${p.scores.reduce((a, b) => a + b, 0)}</td>`;
                 });
                 html += `</tr>`;
             }
@@ -573,7 +552,7 @@
                         <div class="podium-item p-1">
                             <div class="text-[clamp(2rem,6vh,5rem)] mb-2">👑</div>
                             <span class="text-[clamp(1.5rem,3vw,4.5rem)] font-black mb-2 text-accent text-center px-4 leading-tight">${grouped[0].players.join('<br>')}</span>
-                            <span class="rank-badge bg-accent text-black">${grouped[0].players.length > 1 ? 'TIED WINNERS' : 'WINNER'}</span>
+                            <span class="rank-badge bg-accent text-black">${grouped[0].players.length > 1 ? 'TIED CHAMPIONS' : 'CHAMPION'}</span>
                             <span class="text-[clamp(2rem,5vw,6rem)] font-black mb-4">${grouped[0].total}</span>
                         </div>
  
